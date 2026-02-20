@@ -129,11 +129,10 @@ private:
     [&](auto &&...args) {
       (
       [&] {
-        auto msg_buffer =
-        std::make_shared<CanMultiPackageFrame<std::decay_t<decltype(this->_interface.*(args.second))>>>();
+        using MsgT      = std::decay_t<decltype(this->_interface.*(args.second))>;
+        auto msg_buffer = std::make_shared<CanMultiPackageFrame<MsgT>>();
         (void)_can_interface->add_callback(mcan_connect_msg_id_with_node_id((this->_interface.*(args.second)).k_base_address, _node_id),
                                            [this, args, msg_buffer](CanBase &cd, const CanFrame &frame, void *ar) {
-                                             using MsgT = std::decay_t<decltype(this->_interface.*(args.second))>;
                                              // static CanMultiPackageFrame<MsgT> msg_buffer = {};
                                              Status status = mcan_unpack_msg(frame, *msg_buffer);
                                              if(status.status_code() == StatusCode::Cancelled) {
@@ -144,6 +143,9 @@ private:
                                              auto &state_ver = this->_interface.*(args.second);
                                              state_ver.value = msg_buffer->value;
                                              (this->_interface.*(args.first))(state_ver);
+                                             //  if constexpr(MsgT::k_group == "configs") {
+                                             //    callback_save_configs();
+                                             //  }
                                            });
       }(),
       ...);
